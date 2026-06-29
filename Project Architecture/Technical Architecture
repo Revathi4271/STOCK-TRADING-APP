@@ -1,0 +1,285 @@
+# Technical Architecture – SB Stocks
+
+## Overview
+
+The technical architecture of **SB Stocks** describes the technologies, frameworks, components, and communication flow used to build the application. The system follows a **three-tier architecture** with a **Model-View-Controller (MVC)** design pattern, ensuring scalability, modularity, security, and maintainability.
+
+---
+
+# Technical Architecture Diagram
+
+```text
+                   +----------------------+
+                   |      Web Browser     |
+                   | (Chrome, Edge, etc.) |
+                   +----------+-----------+
+                              |
+                         HTTP / HTTPS
+                              |
+                              ▼
++------------------------------------------------------------+
+|                  Frontend (React.js)                        |
+|------------------------------------------------------------|
+| • React Components                                         |
+| • React Router                                             |
+| • Context API                                               |
+| • Axios                                                     |
+| • Chart.js                                                  |
+| • Bootstrap / Tailwind CSS                                  |
++-------------------------+----------------------------------+
+                          |
+                     REST API Requests
+                          |
+                          ▼
++------------------------------------------------------------+
+|            Backend (Node.js + Express.js)                  |
+|------------------------------------------------------------|
+| • Authentication Module                                     |
+| • User Management                                           |
+| • Stock Management                                          |
+| • Portfolio Management                                      |
+| • Trading Engine                                            |
+| • REST API Controllers                                      |
+| • JWT Authentication                                        |
+| • Bcrypt Password Encryption                                |
++-------------------------+----------------------------------+
+                          |
+             +------------+-------------+
+             |                          |
+             ▼                          ▼
++-------------------------+     +---------------------------+
+|      MongoDB / MySQL    |     | External Stock API        |
+|-------------------------|     |---------------------------|
+| User Data               |     | Real-Time Stock Prices    |
+| Portfolio               |     | Historical Market Data    |
+| Transactions            |     | Company Information       |
+| Holdings                |     | Market Trends             |
++-------------------------+     +---------------------------+
+```
+
+---
+
+# Technology Stack
+
+| Layer            | Technology                            | Purpose                     |
+| ---------------- | ------------------------------------- | --------------------------- |
+| Frontend         | React.js                              | User Interface              |
+| Frontend         | HTML5                                 | Page Structure              |
+| Frontend         | CSS3                                  | Styling                     |
+| Frontend         | Bootstrap / Tailwind CSS              | Responsive Design           |
+| Frontend         | Axios                                 | API Communication           |
+| Frontend         | Chart.js                              | Stock Price Visualization   |
+| Backend          | Node.js                               | Server Runtime              |
+| Backend          | Express.js                            | REST API Framework          |
+| Authentication   | JWT                                   | Secure User Authentication  |
+| Security         | Bcrypt                                | Password Encryption         |
+| Database         | MongoDB / MySQL                       | Data Storage                |
+| External Service | Alpha Vantage / Finnhub / Twelve Data | Real-Time Stock Market Data |
+| Version Control  | Git & GitHub                          | Source Code Management      |
+
+---
+
+# Frontend Architecture
+
+The frontend is developed using **React.js**, providing a responsive and interactive user experience.
+
+### Components
+
+* Home Page
+* Login Page
+* Registration Page
+* Dashboard
+* Stock Search
+* Portfolio
+* Trading Interface
+* Transaction History
+* User Profile
+
+### Responsibilities
+
+* Render user interface
+* Handle user interactions
+* Validate user inputs
+* Fetch data from backend APIs
+* Display stock charts and portfolio performance
+* Maintain application state
+
+---
+
+# Backend Architecture
+
+The backend is built using **Node.js** and **Express.js**, exposing RESTful APIs for frontend communication.
+
+### Core Modules
+
+### Authentication Module
+
+* User Registration
+* User Login
+* JWT Token Generation
+* Authorization
+
+### User Module
+
+* Profile Management
+* Account Information
+
+### Stock Module
+
+* Search Stocks
+* Retrieve Real-Time Prices
+* Historical Data
+
+### Portfolio Module
+
+* Buy Stocks
+* Sell Stocks
+* Portfolio Calculation
+* Profit/Loss Analysis
+
+### Transaction Module
+
+* Store Trading History
+* Retrieve Transaction Records
+
+---
+
+# Database Architecture
+
+The database stores all user-related and trading information.
+
+### Main Collections / Tables
+
+**User**
+
+* User ID
+* Name
+* Email
+* Password
+
+**Portfolio**
+
+* Portfolio ID
+* User ID
+* Balance
+* Total Investment
+* Current Value
+
+**Transaction**
+
+* Transaction ID
+* User ID
+* Stock Symbol
+* Quantity
+* Price
+* Buy/Sell Type
+* Date
+
+**Stock Holdings**
+
+* Holding ID
+* User ID
+* Stock Symbol
+* Quantity
+* Average Price
+
+---
+
+# External API Integration
+
+The application integrates with stock market APIs to retrieve live market information.
+
+### Data Retrieved
+
+* Live Stock Prices
+* Historical Price Data
+* Company Details
+* Daily Market Updates
+* Trading Volume
+* Stock Symbols
+
+---
+
+# Communication Flow
+
+```text
+User
+   │
+   ▼
+React Frontend
+   │
+Axios HTTP Request
+   │
+   ▼
+Express REST API
+   │
+   ├── Authenticate User
+   ├── Validate Request
+   ├── Business Logic
+   ├── Fetch Stock Data
+   └── Update Portfolio
+   │
+   ▼
+Database + External Stock API
+   │
+   ▼
+JSON Response
+   │
+   ▼
+React Updates User Interface
+```
+
+---
+
+# Security Architecture
+
+The application implements several security mechanisms:
+
+* JWT-based Authentication
+* Password Hashing using Bcrypt
+* Protected API Routes
+* Input Validation
+* Environment Variables for API Keys
+* HTTPS Communication
+* Secure Session Management
+
+---
+
+# Deployment Architecture
+
+### Frontend
+
+* React Build
+* Vercel / Netlify
+
+### Backend
+
+* Node.js Server
+* Render / Railway / AWS EC2
+
+### Database
+
+* MongoDB Atlas / MySQL Server
+
+### External Services
+
+* Stock Market API Provider
+
+---
+
+# Technical Advantages
+
+* Modular architecture for easier maintenance
+* Clear separation of frontend, backend, and database layers
+* Secure authentication and authorization
+* RESTful API communication
+* Scalable design for future enhancements
+* Real-time stock data integration
+* Responsive and user-friendly interface
+* Easy deployment on cloud platforms
+
+---
+
+# Summary
+
+The technical architecture of **SB Stocks** combines **React.js** for the frontend, **Node.js with Express.js** for the backend, and **MongoDB/MySQL** for data storage. The application communicates with external stock market APIs to provide real-time market data while securely managing user accounts, portfolios, and paper trading transactions. The layered architecture and MVC design ensure a scalable, secure, and maintainable system suitable for both educational and practical stock trading simulations.
