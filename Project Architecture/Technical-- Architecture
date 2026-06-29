@@ -1,0 +1,168 @@
+# Technical Architecture – SB Stocks
+
+## Overview
+
+SB Stocks is a three-tier web application designed to provide a realistic paper trading environment using real-time US stock market data. The system consists of a **Frontend**, **Backend**, **Database**, and an **External Stock Market API** that work together to deliver secure, scalable, and efficient trading simulations.
+
+---
+
+## Architecture Components
+
+### 1. Frontend (Presentation Layer)
+
+The frontend is responsible for user interaction and provides an intuitive interface for both users and administrators.
+
+**Features**
+
+* Landing Page
+* User Registration and Login
+* User Dashboard
+* Admin Dashboard
+* Live Stock Listings
+* Stock Charts (Real-Time & Historical)
+* Buy/Sell Stock Interface
+* Portfolio Management
+* Transaction History
+* Virtual Wallet (Deposit & Withdrawal)
+
+The frontend communicates with the backend through secure REST APIs.
+
+---
+
+### 2. Backend (Application Layer)
+
+The backend contains the business logic and manages communication between the frontend, database, and external stock market services.
+
+**Modules**
+
+* User Authentication and Authorization
+* User Management
+* Portfolio Management
+* Stock Order Processing
+* Buy/Sell Order Validation
+* Virtual Fund Management
+* Transaction Management
+* Market Data Integration
+* Admin Management
+* Reporting Services
+
+**Responsibilities**
+
+* Authenticate users securely.
+* Process stock buy and sell orders.
+* Update portfolios after each transaction.
+* Maintain transaction records.
+* Fetch real-time stock prices from external APIs.
+* Provide secure REST API endpoints for the frontend.
+
+---
+
+### 3. Database (Data Layer)
+
+The database stores all application data required for paper trading.
+
+**Collections/Tables**
+
+* Users
+* Stocks
+* Portfolios
+* Orders
+* Transactions
+* Wallet
+* Market Data Cache
+
+The database ensures secure storage, fast retrieval, and consistency of trading information.
+
+---
+
+### 4. External Stock Market API
+
+SB Stocks integrates with a real-time stock market API to retrieve:
+
+* Live stock prices
+* Historical stock data
+* Company information
+* Market trends
+
+This enables realistic paper trading without involving real money.
+
+---
+
+## System Workflow
+
+1. The user accesses the application through the frontend.
+2. The frontend sends requests to the backend via REST APIs.
+3. The backend authenticates the user and processes business logic.
+4. For stock-related requests, the backend retrieves live market data from the external stock market API.
+5. The backend stores and retrieves data from the database.
+6. Updated portfolio details, stock prices, and transaction history are returned to the frontend for display.
+
+---
+
+## Architecture Flow
+
+```
+                    +-----------------------+
+                    |        User           |
+                    +-----------+-----------+
+                                |
+                                v
+                    +-----------------------+
+                    |      Frontend         |
+                    |-----------------------|
+                    | Landing Page          |
+                    | User Dashboard        |
+                    | Admin Dashboard       |
+                    | Stock Charts          |
+                    | Buy/Sell Orders       |
+                    | Portfolio             |
+                    +-----------+-----------+
+                                |
+                           REST API
+                                |
+                                v
+                    +-----------------------+
+                    |       Backend         |
+                    |-----------------------|
+                    | Authentication        |
+                    | User Management       |
+                    | Portfolio Service     |
+                    | Order Management      |
+                    | Transaction Service   |
+                    | Wallet Service        |
+                    | Admin Module          |
+                    +-----+-----------+-----+
+                          |           |
+                          |           |
+                          v           v
+              +----------------+   +-------------------+
+              |   Database     |   | Stock Market API  |
+              |----------------|   |-------------------|
+              | Users          |   | Live Prices       |
+              | Stocks         |   | Historical Data   |
+              | Portfolios     |   | Company Details   |
+              | Orders         |   | Market Trends     |
+              | Transactions   |   +-------------------+
+              | Wallet         |
+              +----------------+
+```
+
+---
+
+## Key Features
+
+* Three-tier architecture for scalability and maintainability.
+* Secure authentication and authorization.
+* RESTful API communication.
+* Real-time stock market data integration.
+* Virtual paper trading with no financial risk.
+* Portfolio tracking and performance analysis.
+* Complete transaction history.
+* Modular backend for future enhancements.
+* Reliable database for secure data storage.
+
+---
+
+## Conclusion
+
+The SB Stocks technical architecture is designed to provide a secure, modular, and scalable platform for paper stock trading. By separating the presentation, business logic, and data layers while integrating real-time market data, the system delivers a realistic trading experience that allows users to practice investment strategies without financial risk.
