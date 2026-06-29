@@ -1,0 +1,28 @@
+# Entity Relationship (ER) Diagram
+
+## Description
+
+The **SB Stocks Entity Relationship (ER) Diagram** represents the core database structure of the paper trading application and illustrates how the major entities interact with one another. It serves as the foundation for organizing and managing data within the system.
+
+The primary entities include **Users**, **Stocks**, **Portfolios**, **Transactions**, and **Market Data**.
+
+* **Users** can register, log in securely, and manage one or more virtual portfolios.
+* **Portfolios** store the stocks owned by users, allowing them to diversify their simulated investments using virtual funds.
+* **Stocks** contain company information, live prices, and historical market data used for paper trading.
+* **Transactions** record every buy and sell operation performed by users. Each transaction is linked to a specific user, portfolio, and stock, providing a complete trading history.
+* **Market Data** supplies real-time and historical stock prices, enabling realistic market simulations and informed trading decisions.
+
+## Entity Relationships
+
+* One **User** can own multiple **Portfolios**.
+* One **Portfolio** can contain multiple **Stocks**.
+* One **User** can perform multiple **Transactions**.
+* Each **Transaction** is associated with one **Stock** and one **Portfolio**.
+* One **Stock** can appear in multiple portfolios and can be involved in many transactions.
+* **Market Data** provides pricing information for all listed stocks.
+
+## Purpose
+
+The ER diagram models real-world stock trading relationships in a virtual environment. It enables users to practice buying and selling stocks, monitor portfolio performance, analyze trading strategies, and gain practical investment experience without financial risk.
+
+By organizing the relationships between users, portfolios, stocks, transactions, and market data, the ER diagram ensures efficient data management, maintains data integrity, and supports a scalable architecture for the SB Stocks paper trading platform.
