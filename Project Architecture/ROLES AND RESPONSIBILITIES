@@ -1,0 +1,62 @@
+# 👥 Roles and Responsibilities
+
+## 1. User (Trader)
+
+The User is the primary participant who uses the platform to practice stock trading with virtual money.
+
+### Responsibilities
+- Register and create a secure account.
+- Log in to access a personalized trading dashboard.
+- Create and manage one or more virtual portfolios.
+- Buy and sell stocks using virtual funds.
+- Monitor portfolio performance, profits, and losses.
+- View real-time and historical stock market data.
+- Analyze trading strategies using market trends.
+- Track complete transaction history.
+- Maintain account information securely.
+
+---
+
+## 2. System (SB Stocks Platform)
+
+The system is responsible for delivering a secure, reliable, and realistic paper trading environment.
+
+### Responsibilities
+- Authenticate users securely.
+- Provide real-time US stock market data.
+- Retrieve and display historical stock data.
+- Execute virtual buy and sell transactions.
+- Automatically update portfolio holdings and balances.
+- Calculate profits, losses, and portfolio value.
+- Store user portfolios and transaction records.
+- Maintain data consistency and integrity.
+- Generate dashboards and portfolio analytics.
+- Ensure fast, responsive, and user-friendly performance.
+
+---
+
+## 3. Admin
+
+The Admin manages the application, monitors system health, and ensures smooth platform operation.
+
+### Responsibilities
+- Monitor application performance and availability.
+- Manage user accounts when necessary.
+- Oversee transaction records and system activities.
+- Maintain stock listings and API integrations.
+- Ensure data accuracy and reliability.
+- Resolve technical issues and software bugs.
+- Perform database maintenance and backups.
+- Monitor system security and prevent unauthorized access.
+- Ensure compliance with paper trading standards.
+- Deploy updates and maintain the application.
+
+---
+
+## Responsibility Summary
+
+| Role | Primary Responsibility |
+|------|-------------------------|
+| **User (Trader)** | Practice stock trading using virtual money, manage portfolios, and analyze trading performance. |
+| **System (SB Stocks Platform)** | Provide secure authentication, real-time market data, transaction processing, and portfolio management. |
+| **Admin** | Maintain the platform, monitor security, manage data integrity, and ensure smooth application performance. |
