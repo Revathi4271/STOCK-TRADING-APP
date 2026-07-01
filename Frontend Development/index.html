@@ -1,0 +1,1296 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>📈 SB Stocks - Master the Market Risk Free</title>
+    <!-- Tailwind CSS v4 Browser CDN -->
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <!-- React 17/18 UMD CDNs -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel Browser Compiler CDN -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- React Router DOM v5 UMD CDN (completely self-contained UMD package) -->
+    <script src="https://unpkg.com/react-router-dom@5.3.4/umd/react-router-dom.min.js"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom Style Settings -->
+    <style>
+      body {
+        background-color: #f9fafb;
+        color: #111827;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      }
+      .active {
+        background-color: #e0e7ff;
+        color: #4f46e5;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Core App Code Script (JSX compiled in-browser) -->
+    <script type="text/babel">
+      const { useState, useEffect, useRef, createContext, useContext } = React;
+      const { HashRouter, Route, Switch, Link, NavLink, Redirect, useHistory, useParams } = ReactRouterDOM;
+
+      // =========================================================================
+      // 1. INITIALIZE MOCK DATA IN LOCAL STORAGE
+      // =========================================================================
+      const initLocalStorage = () => {
+        const defaultUsers = [
+          { id: 1, name: 'Admin User', email: 'admin@sbstocks.com', password: 'password123', role: 'admin', balance: 100000 },
+          { id: 2, name: 'Test User', email: 'user@sbstocks.com', password: 'password123', role: 'user', balance: 50000 },
+        ];
+
+        const defaultStocks = [
+          { id: 1, symbol: 'AAPL', name: 'Apple Inc.', price: 173.50, change: 1.25, volume: 55000000, marketCap: '2.8T' },
+          { id: 2, symbol: 'MSFT', name: 'Microsoft Corp.', price: 345.10, change: -0.85, volume: 23000000, marketCap: '2.6T' },
+          { id: 3, symbol: 'GOOGL', name: 'Alphabet Inc.', price: 138.40, change: 2.10, volume: 18000000, marketCap: '1.7T' },
+          { id: 4, symbol: 'AMZN', name: 'Amazon.com Inc.', price: 143.20, change: 0.45, volume: 42000000, marketCap: '1.5T' },
+          { id: 5, symbol: 'TSLA', name: 'Tesla Inc.', price: 215.30, change: -3.20, volume: 110000000, marketCap: '680B' },
+          { id: 6, symbol: 'META', name: 'Meta Platforms Inc.', price: 312.80, change: 1.15, volume: 15000000, marketCap: '800B' },
+          { id: 7, symbol: 'NVDA', name: 'NVIDIA Corp.', price: 450.20, change: 5.60, volume: 38000000, marketCap: '1.1T' },
+        ];
+
+        if (!localStorage.getItem('users')) {
+          localStorage.setItem('users', JSON.stringify(defaultUsers));
+        }
+        if (!localStorage.getItem('stocks')) {
+          localStorage.setItem('stocks', JSON.stringify(defaultStocks));
+        }
+      };
+
+      initLocalStorage();
+
+      // =========================================================================
+      // 2. MOCK API SERVICES
+      // =========================================================================
+      const services = {
+        auth: {
+          login: async (email, password) => {
+            return new Promise((resolve, reject) => {
+              setTimeout(() => {
+                const users = JSON.parse(localStorage.getItem('users'));
+                const user = users.find(u => u.email === email && u.password === password);
+                if (user) {
+                  const userWithoutPassword = { ...user };
+                  delete userWithoutPassword.password;
+                  resolve({ token: 'mock-jwt-token-12345', user: userWithoutPassword });
+                } else {
+                  reject(new Error('Invalid email or password'));
+                }
+              }, 200);
+            });
+          },
+          register: async (userData) => {
+            return new Promise((resolve) => {
+              setTimeout(() => {
+                const users = JSON.parse(localStorage.getItem('users'));
+                const newUser = {
+                  id: Date.now(),
+                  ...userData,
+                  role: 'user',
+                  balance: 10000, // starting balance
+                };
+                users.push(newUser);
+                localStorage.setItem('users', JSON.stringify(users));
+                const userWithoutPassword = { ...newUser };
+                delete userWithoutPassword.password;
+                resolve({ token: 'mock-jwt-token-67890', user: userWithoutPassword });
+              }, 200);
+            });
+          }
+        },
+        stocks: {
+          getStocks: async () => {
+            return new Promise(resolve => {
+              const stocks = JSON.parse(localStorage.getItem('stocks'));
+              resolve(stocks);
+            });
+          },
+          getStockById: async (symbol) => {
+            return new Promise((resolve, reject) => {
+              const stocks = JSON.parse(localStorage.getItem('stocks'));
+              const stock = stocks.find(s => s.symbol === symbol);
+              if (stock) {
+                const historicalData = Array.from({ length: 30 }, (_, i) => ({
+                  date: new Date(Date.now() - (30 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                  price: stock.price * (1 + (Math.random() * 0.1 - 0.05)),
+                }));
+                resolve({ ...stock, historicalData });
+              } else {
+                reject(new Error('Stock not found'));
+              }
+            });
+          }
+        },
+        portfolio: {
+          getPortfolio: async (userId) => {
+            return new Promise((resolve) => {
+              const orders = JSON.parse(localStorage.getItem('orders') || '{}');
+              const userOrders = orders[userId] || [];
+              const holdingsMap = {};
+              
+              userOrders.forEach(order => {
+                if (!holdingsMap[order.stockSymbol]) {
+                  holdingsMap[order.stockSymbol] = {
+                    symbol: order.stockSymbol,
+                    name: order.stockName,
+                    quantity: 0,
+                    totalInvested: 0,
+                  };
+                }
+                if (order.type === 'buy') {
+                  holdingsMap[order.stockSymbol].quantity += order.quantity;
+                  holdingsMap[order.stockSymbol].totalInvested += (order.price * order.quantity);
+                } else if (order.type === 'sell') {
+                  holdingsMap[order.stockSymbol].quantity -= order.quantity;
+                  holdingsMap[order.stockSymbol].totalInvested -= (order.price * order.quantity);
+                }
+              });
+
+              const portfolio = Object.values(holdingsMap)
+                .filter(h => h.quantity > 0)
+                .map(h => {
+                  const avgPrice = h.totalInvested / h.quantity;
+                  return {
+                    ...h,
+                    avgPrice,
+                    currentPrice: avgPrice * (1 + (Math.random() * 0.06 - 0.03))
+                  };
+                });
+              resolve(portfolio);
+            });
+          },
+          getPortfolioSummary: async (userId) => {
+            return new Promise((resolve) => {
+              const orders = JSON.parse(localStorage.getItem('orders') || '{}');
+              const userOrders = orders[userId] || [];
+              const holdingsMap = {};
+
+              userOrders.forEach(order => {
+                if (!holdingsMap[order.stockSymbol]) {
+                  holdingsMap[order.stockSymbol] = { quantity: 0, totalInvested: 0 };
+                }
+                if (order.type === 'buy') {
+                  holdingsMap[order.stockSymbol].quantity += order.quantity;
+                  holdingsMap[order.stockSymbol].totalInvested += (order.price * order.quantity);
+                } else if (order.type === 'sell') {
+                  holdingsMap[order.stockSymbol].quantity -= order.quantity;
+                  holdingsMap[order.stockSymbol].totalInvested -= (order.price * order.quantity);
+                }
+              });
+
+              let totalInvested = 0;
+              let currentValue = 0;
+
+              Object.values(holdingsMap).forEach(h => {
+                if (h.quantity > 0) {
+                  totalInvested += h.totalInvested;
+                  const avgPrice = h.totalInvested / h.quantity;
+                  const mockCurrentPrice = avgPrice * (1 + (Math.random() * 0.06 - 0.03));
+                  currentValue += mockCurrentPrice * h.quantity;
+                }
+              });
+
+              resolve({
+                totalInvested,
+                currentValue,
+                profitLoss: currentValue - totalInvested,
+                profitLossPercentage: totalInvested > 0 ? ((currentValue - totalInvested) / totalInvested) * 100 : 0
+              });
+            });
+          }
+        },
+        orders: {
+          getOrders: async (userId) => {
+            const orders = JSON.parse(localStorage.getItem('orders') || '{}');
+            return orders[userId] || [];
+          },
+          placeOrder: async (userId, orderData) => {
+            const orders = JSON.parse(localStorage.getItem('orders') || '{}');
+            const userOrders = orders[userId] || [];
+            const newOrder = {
+              id: Date.now(),
+              date: new Date().toISOString(),
+              status: 'completed',
+              ...orderData
+            };
+            orders[userId] = [newOrder, ...userOrders];
+            localStorage.setItem('orders', JSON.stringify(orders));
+            return newOrder;
+          }
+        },
+        admin: {
+          getUsers: async () => {
+            const users = JSON.parse(localStorage.getItem('users'));
+            return users.map(u => {
+              const uCopy = { ...u };
+              delete uCopy.password;
+              return uCopy;
+            });
+          },
+          getSystemStats: async () => {
+            return {
+              totalUsers: 1542,
+              activeUsers: 843,
+              totalTrades: 45210,
+              volumeTraded: 25400000
+            };
+          }
+        }
+      };
+
+      // =========================================================================
+      // 3. AUTHENTICATION CONTEXT & TOASTS
+      // =========================================================================
+      const AuthContext = createContext();
+      const useAuth = () => useContext(AuthContext);
+
+      const AuthProvider = ({ children }) => {
+        const [user, setUser] = useState(null);
+        const [loading, setLoading] = useState(true);
+        const [toasts, setToasts] = useState([]);
+
+        const showToast = (message, type = 'success') => {
+          const id = Date.now();
+          setToasts(t => [...t, { id, message, type }]);
+          setTimeout(() => {
+            setToasts(t => t.filter(x => x.id !== id));
+          }, 3000);
+        };
+
+        useEffect(() => {
+          const storedUser = localStorage.getItem('user');
+          const token = localStorage.getItem('token');
+          if (storedUser && token) {
+            setUser(JSON.parse(storedUser));
+          }
+          setLoading(false);
+        }, []);
+
+        const login = async (email, password) => {
+          try {
+            const res = await services.auth.login(email, password);
+            localStorage.setItem('token', res.token);
+            localStorage.setItem('user', JSON.stringify(res.user));
+            setUser(res.user);
+            showToast('Logged in successfully!', 'success');
+            return res.user;
+          } catch (err) {
+            showToast(err.message || 'Login failed', 'error');
+            throw err;
+          }
+        };
+
+        const register = async (userData) => {
+          try {
+            const res = await services.auth.register(userData);
+            localStorage.setItem('token', res.token);
+            localStorage.setItem('user', JSON.stringify(res.user));
+            setUser(res.user);
+            showToast('Registered successfully!', 'success');
+            return res.user;
+          } catch (err) {
+            showToast(err.message || 'Registration failed', 'error');
+            throw err;
+          }
+        };
+
+        const logout = () => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+          showToast('Logged out successfully', 'info');
+        };
+
+        const updateBalance = (newBalance) => {
+          const updatedUser = { ...user, balance: newBalance };
+          setUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          
+          // Update in user list too
+          const usersList = JSON.parse(localStorage.getItem('users'));
+          const idx = usersList.findIndex(u => u.id === user.id);
+          if (idx !== -1) {
+            usersList[idx].balance = newBalance;
+            localStorage.setItem('users', JSON.stringify(usersList));
+          }
+        };
+
+        const value = { user, loading, login, register, logout, updateBalance, showToast };
+
+        return (
+          <AuthContext.Provider value={value}>
+            {!loading && children}
+            {/* Toast overlay */}
+            <div className="fixed bottom-4 right-4 z-50 flex flex-col space-y-2">
+              {toasts.map(t => (
+                <div key={t.id} className={`p-4 rounded-lg shadow-lg text-white font-medium flex items-center gap-2 border-l-4 ${t.type === 'success' ? 'bg-green-600 border-green-800' : t.type === 'error' ? 'bg-red-600 border-red-800' : 'bg-blue-600 border-blue-800'}`}>
+                  {t.message}
+                </div>
+              ))}
+            </div>
+          </AuthContext.Provider>
+        );
+      };
+
+      const ProtectedRoute = ({ component: Component, adminOnly = false, ...rest }) => {
+        const { user } = useAuth();
+        return (
+          <Route
+            {...rest}
+            render={(props) => {
+              if (!user) return <Redirect to="/login" />;
+              if (adminOnly && user.role !== 'admin') return <Redirect to="/dashboard" />;
+              return <Component {...props} />;
+            }}
+          />
+        );
+      };
+
+      // =========================================================================
+      // 4. COMMON UI COMPONENTS
+      // =========================================================================
+      const Card = ({ children, className = '', noPadding = false }) => (
+        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${!noPadding ? 'p-6' : ''} ${className}`}>
+          {children}
+        </div>
+      );
+
+      const Button = ({ children, variant = 'primary', size = 'md', className = '', ...props }) => {
+        const base = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+        const variants = {
+          primary: 'bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500',
+          secondary: 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus:ring-indigo-500',
+          danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
+          success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
+        };
+        const sizes = {
+          sm: 'px-3 py-1.5 text-sm',
+          md: 'px-4 py-2 text-base',
+          lg: 'px-6 py-3 text-lg',
+        };
+        return (
+          <button className={`${base} ${variants[variant]} ${sizes[size]} ${className}`} {...props}>
+            {children}
+          </button>
+        );
+      };
+
+      const Loader = () => (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+        </div>
+      );
+
+      const Table = ({ columns, data, keyField = 'id', emptyMessage = 'No data available' }) => (
+        <Card noPadding className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                {columns.map((col, index) => (
+                  <th key={index} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {col.header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {data.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-gray-500">
+                    {emptyMessage}
+                  </td>
+                </tr>
+              ) : (
+                data.map((row, index) => (
+                  <tr key={row[keyField] || index} className="hover:bg-gray-50 transition-colors">
+                    {columns.map((col, colIdx) => (
+                      <td key={colIdx} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {col.render ? col.render(row) : row[col.accessor]}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </Card>
+      );
+
+      // =========================================================================
+      // 5. LAYOUT COMPONENTS
+      // =========================================================================
+      const Navbar = () => {
+        const { user, logout } = useAuth();
+        const [isOpen, setIsOpen] = useState(false);
+
+        return (
+          <nav className="bg-white border-b border-gray-200 sticky top-0 z-40">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between h-16">
+                <div className="flex items-center">
+                  <Link to="/" className="flex items-center gap-2">
+                    <div className="bg-indigo-600 p-2 rounded-lg text-white">
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8L11 17l-4-4-6 6" /></svg>
+                    </div>
+                    <span className="font-bold text-xl text-gray-900 tracking-tight">SB Stocks</span>
+                  </Link>
+                </div>
+
+                <div className="hidden sm:flex sm:items-center sm:space-x-4">
+                  {!user ? (
+                    <>
+                      <Link to="/login" className="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md font-medium transition-colors">Login</Link>
+                      <Link to="/register"><Button variant="primary">Get Started</Button></Link>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-4">
+                      <div className="flex flex-col items-end mr-4">
+                        <span className="text-xs text-gray-500">Balance</span>
+                        <span className="font-bold text-gray-900">${user.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <Link to="/profile" className="text-gray-600 hover:text-indigo-600">
+                        <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center sm:hidden">
+                  <button onClick={() => setIsOpen(!isOpen)} className="p-2 rounded-md text-gray-400 hover:text-gray-500">
+                    {isOpen ? (
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    ) : (
+                      <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {isOpen && (
+              <div className="sm:hidden border-t border-gray-200 bg-white">
+                <div className="pt-2 pb-3 space-y-1">
+                  {!user ? (
+                    <>
+                      <Link to="/login" className="block px-4 py-2 text-gray-600 hover:text-indigo-600 hover:bg-gray-50">Login</Link>
+                      <Link to="/register" className="block px-4 py-2 text-gray-600 hover:text-indigo-600 hover:bg-gray-50">Register</Link>
+                    </>
+                  ) : (
+                    <>
+                      <div className="px-4 py-2 border-b border-gray-100">
+                        <p className="text-xs text-gray-500">Balance</p>
+                        <p className="text-lg font-bold text-gray-900">${user.balance?.toLocaleString()}</p>
+                      </div>
+                      <Link to="/dashboard" className="block px-4 py-2 text-gray-600 hover:bg-gray-50">Dashboard</Link>
+                      <Link to="/profile" className="block px-4 py-2 text-gray-600 hover:bg-gray-50">Profile</Link>
+                      <button onClick={logout} className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50">Logout</button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </nav>
+        );
+      };
+
+      const Sidebar = () => {
+        const { user, logout } = useAuth();
+        const navItems = [
+          { name: 'Dashboard', path: '/dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+          { name: 'Stocks Market', path: '/stocks', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+          { name: 'Portfolio', path: '/portfolio', icon: 'M11 3.055A9.003 9.003 0 1020.945 13H11V3.055z' },
+          { name: 'Orders', path: '/orders', icon: 'M4 6h16M4 10h16M4 14h16M4 18h16' },
+          { name: 'Transactions', path: '/transactions', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+          { name: 'Watchlist', path: '/watchlist', icon: 'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.907c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.907a1 1 0 00.95-.69l1.519-4.674z' },
+          { name: 'Profile', path: '/profile', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' }
+        ];
+
+        if (user?.role === 'admin') {
+          navItems.push({ name: 'Admin Panel', path: '/admin', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' });
+        }
+
+        return (
+          <div className="w-64 bg-white border-r border-gray-200 h-[calc(100vh-4rem)] sticky top-16 hidden md:flex flex-col">
+            <div className="flex-1 overflow-y-auto py-4">
+              <nav className="px-3 space-y-1">
+                {navItems.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.path}
+                    className="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
+                    activeClassName="active"
+                  >
+                    <svg className="mr-3 flex-shrink-0 h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                    </svg>
+                    {item.name}
+                  </NavLink>
+                ))}
+              </nav>
+            </div>
+            <div className="p-4 border-t border-gray-200">
+              <button onClick={logout} className="flex items-center w-full px-3 py-2.5 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors">
+                <svg className="mr-3 flex-shrink-0 h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                Logout
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      const MainLayout = ({ children }) => (
+        <div className="min-h-screen flex flex-col bg-gray-50">
+          <Navbar />
+          <main className="flex-grow flex flex-col">{children}</main>
+          <footer className="bg-white border-t border-gray-200 py-8">
+            <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
+              <span>© {new Date().getFullYear()} SB Stocks. All rights reserved. Paper trading simulation only.</span>
+              <div className="flex space-x-4 mt-4 md:mt-0">
+                <a href="#" className="hover:text-indigo-600">Terms</a>
+                <a href="#" className="hover:text-indigo-600">Privacy Policy</a>
+              </div>
+            </div>
+          </footer>
+        </div>
+      );
+
+      const DashboardLayout = ({ children }) => (
+        <div className="min-h-screen flex flex-col bg-gray-50">
+          <Navbar />
+          <div className="flex flex-1 overflow-hidden">
+            <Sidebar />
+            <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+              <div className="max-w-7xl mx-auto">{children}</div>
+            </main>
+          </div>
+        </div>
+      );
+
+      // =========================================================================
+      // 6. ROUTE PAGES
+      // =========================================================================
+      
+      // A. Home Page
+      const Home = () => (
+        <div className="flex-1 flex flex-col justify-center items-center text-center px-4 py-20 bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+          <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6">
+            Master the Market, <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Risk Free.</span>
+          </h1>
+          <p className="max-w-2xl text-xl text-gray-500 mb-10">
+            SB Stocks is a premium paper trading platform. Practice trading strategies with real-time market data without risking your actual money.
+          </p>
+          <div className="flex gap-4">
+            <Link to="/register"><Button size="lg">Start Trading for Free</Button></Link>
+            <Link to="/login"><Button variant="secondary" size="lg">Login to Dashboard</Button></Link>
+          </div>
+        </div>
+      );
+
+      // B. Login Page
+      const Login = () => {
+        const [email, setEmail] = useState('');
+        const [password, setPassword] = useState('');
+        const [loading, setLoading] = useState(false);
+        const { login } = useAuth();
+        const history = useHistory();
+
+        const handleSubmit = async (e) => {
+          e.preventDefault();
+          setLoading(true);
+          try {
+            await login(email, password);
+            history.push('/dashboard');
+          } catch(err) {}
+          setLoading(false);
+        };
+
+        return (
+          <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center py-12 px-4">
+            <Card className="max-w-md w-full space-y-6">
+              <h2 className="text-center text-3xl font-extrabold text-gray-900">Sign in to your account</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Email address</label>
+                  <input type="email" required className="mt-1 w-full px-3 py-2 border rounded-md" value={email} onChange={e => setEmail(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Password</label>
+                  <input type="password" required className="mt-1 w-full px-3 py-2 border rounded-md" value={password} onChange={e => setPassword(e.target.value)} />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>Sign in</Button>
+              </form>
+              <div className="bg-gray-50 p-4 rounded-lg text-xs text-gray-500 space-y-1">
+                <p className="font-semibold text-gray-700">Mock logins:</p>
+                <p>• User: user@sbstocks.com / password123</p>
+                <p>• Admin: admin@sbstocks.com / password123</p>
+              </div>
+            </Card>
+          </div>
+        );
+      };
+
+      // C. Register Page
+      const Register = () => {
+        const [name, setName] = useState('');
+        const [email, setEmail] = useState('');
+        const [password, setPassword] = useState('');
+        const [loading, setLoading] = useState(false);
+        const { register } = useAuth();
+        const history = useHistory();
+
+        const handleSubmit = async (e) => {
+          e.preventDefault();
+          setLoading(true);
+          try {
+            await register({ name, email, password });
+            history.push('/dashboard');
+          } catch(err) {}
+          setLoading(false);
+        };
+
+        return (
+          <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center py-12 px-4">
+            <Card className="max-w-md w-full space-y-6">
+              <h2 className="text-center text-3xl font-extrabold text-gray-900">Create your account</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Full Name</label>
+                  <input type="text" required className="mt-1 w-full px-3 py-2 border rounded-md" value={name} onChange={e => setName(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Email address</label>
+                  <input type="email" required className="mt-1 w-full px-3 py-2 border rounded-md" value={email} onChange={e => setEmail(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Password</label>
+                  <input type="password" required className="mt-1 w-full px-3 py-2 border rounded-md" value={password} onChange={e => setPassword(e.target.value)} />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>Register</Button>
+              </form>
+            </Card>
+          </div>
+        );
+      };
+
+      // D. Dashboard Page
+      const Dashboard = () => {
+        const { user } = useAuth();
+        const [summary, setSummary] = useState(null);
+        const [recentTrades, setRecentTrades] = useState([]);
+        const [loading, setLoading] = useState(true);
+
+        useEffect(() => {
+          const fetchDashboard = async () => {
+            const sum = await services.portfolio.getPortfolioSummary(user.id);
+            const ords = await services.orders.getOrders(user.id);
+            setSummary(sum);
+            setRecentTrades(ords.slice(0, 5));
+            setLoading(false);
+          };
+          fetchDashboard();
+        }, [user.id]);
+
+        if (loading) return <Loader />;
+
+        return (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Welcome, {user.name}!</h1>
+              <p className="text-gray-500">Overview of your simulator trading portfolio.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="flex flex-col justify-between h-32">
+                <span className="text-sm font-medium text-gray-500">Available Balance</span>
+                <span className="text-3xl font-bold text-gray-900 mt-2">${user.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </Card>
+              <Card className="flex flex-col justify-between h-32">
+                <span className="text-sm font-medium text-gray-500">Portfolio Value</span>
+                <span className="text-3xl font-bold text-gray-900 mt-2">${summary?.totalInvested?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              </Card>
+              <Card className="flex flex-col justify-between h-32 border-l-4 border-green-500">
+                <span className="text-sm font-medium text-gray-500">Total Profit / Loss</span>
+                <div className="flex items-baseline gap-2 mt-2">
+                  <span className={`text-2xl font-bold ${summary?.profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {summary?.profitLoss >= 0 ? '+' : '-'}${Math.abs(summary?.profitLoss || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                  <span className={`text-xs ${summary?.profitLossPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ({summary?.profitLossPercentage >= 0 ? '+' : ''}{summary?.profitLossPercentage?.toFixed(2)}%)
+                  </span>
+                </div>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-gray-900">Recent Trades</h3>
+                  <Link to="/transactions" className="text-sm text-indigo-600 hover:text-indigo-500 font-medium">View All</Link>
+                </div>
+                {recentTrades.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">No trades yet.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {recentTrades.map(trade => (
+                      <div key={trade.id} className="flex justify-between items-center border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                        <div>
+                          <span className="font-bold text-gray-900">{trade.stockSymbol}</span>
+                          <span className="text-xs text-gray-500 ml-2">{new Date(trade.date).toLocaleDateString()}</span>
+                          <p className="text-xs text-gray-500">{trade.type.toUpperCase()} • {trade.quantity} Shares</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-gray-900">${trade.totalAmount.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
+              <Card className="flex flex-col justify-center items-center text-center p-8 bg-gradient-to-br from-indigo-50 to-indigo-100 border-none">
+                <h3 className="text-xl font-bold text-indigo-900 mb-2">Practice Investment</h3>
+                <p className="text-indigo-700 text-sm mb-6 max-w-sm">Analyze stock trends risk-free and master the art of trading.</p>
+                <Link to="/stocks"><Button size="lg">Explore Stocks</Button></Link>
+              </Card>
+            </div>
+          </div>
+        );
+      };
+
+      // E. Stocks Market List Page
+      const Stocks = () => {
+        const [stocks, setStocks] = useState([]);
+        const [loading, setLoading] = useState(true);
+        const [search, setSearch] = useState('');
+
+        useEffect(() => {
+          services.stocks.getStocks().then(res => {
+            setStocks(res);
+            setLoading(false);
+          });
+        }, []);
+
+        const filtered = stocks.filter(s => 
+          s.symbol.toLowerCase().includes(search.toLowerCase()) || 
+          s.name.toLowerCase().includes(search.toLowerCase())
+        );
+
+        const columns = [
+          {
+            header: 'Symbol',
+            accessor: 'symbol',
+            render: (row) => (
+              <div className="flex items-center">
+                <div className="h-10 w-10 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-800 font-bold">{row.symbol.substring(0, 2)}</div>
+                <div className="ml-3">
+                  <div className="font-bold">{row.symbol}</div>
+                  <div className="text-xs text-gray-500">{row.name}</div>
+                </div>
+              </div>
+            )
+          },
+          { header: 'Price', accessor: 'price', render: (row) => `$${row.price.toFixed(2)}` },
+          { 
+            header: '24h Change', 
+            accessor: 'change', 
+            render: (row) => (
+              <span className={row.change >= 0 ? 'text-green-600' : 'text-red-600'}>
+                {row.change >= 0 ? '+' : ''}{row.change.toFixed(2)}%
+              </span>
+            )
+          },
+          { header: 'Volume', accessor: 'volume', render: (row) => row.volume.toLocaleString() },
+          { header: 'Market Cap', accessor: 'marketCap' },
+          {
+            header: 'Action',
+            accessor: 'symbol',
+            render: (row) => <Link to={`/stocks/${row.symbol}`} className="text-indigo-600 font-semibold hover:underline">Trade</Link>
+          }
+        ];
+
+        if (loading) return <Loader />;
+
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-2xl font-bold">Stocks Market</h1>
+                <p className="text-gray-500">Live simulator stock rates.</p>
+              </div>
+              <input type="text" placeholder="Search..." className="px-3 py-2 border rounded-md w-64" value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <Table columns={columns} data={filtered} keyField="symbol" />
+          </div>
+        );
+      };
+
+      // F. Stock Details Page
+      const StockDetails = () => {
+        const { id } = useParams();
+        const { user, updateBalance, showToast } = useAuth();
+        const history = useHistory();
+        
+        const [stock, setStock] = useState(null);
+        const [loading, setLoading] = useState(true);
+        const [quantity, setQuantity] = useState(1);
+        const [tradeType, setTradeType] = useState('buy');
+        const [owned, setOwned] = useState(0);
+
+        const chartRef = useRef(null);
+        const chartInstance = useRef(null);
+
+        useEffect(() => {
+          const loadDetails = async () => {
+            const data = await services.stocks.getStockById(id);
+            setStock(data);
+
+            const portfolio = await services.portfolio.getPortfolio(user.id);
+            const holding = portfolio.find(h => h.symbol === data.symbol);
+            setOwned(holding ? holding.quantity : 0);
+            setLoading(false);
+          };
+          loadDetails();
+        }, [id, user.id]);
+
+        useEffect(() => {
+          if (!stock || !chartRef.current) return;
+          const ctx = chartRef.current.getContext('2d');
+          
+          if (chartInstance.current) {
+            chartInstance.current.destroy();
+          }
+
+          chartInstance.current = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: stock.historicalData.map(h => h.date),
+              datasets: [{
+                data: stock.historicalData.map(h => h.price),
+                borderColor: '#4f46e5',
+                backgroundColor: 'rgba(79, 70, 229, 0.05)',
+                fill: true,
+                tension: 0.1,
+                borderWidth: 2,
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: { x: { grid: { display: false } } }
+            }
+          });
+
+          return () => {
+            if (chartInstance.current) {
+              chartInstance.current.destroy();
+            }
+          };
+        }, [stock]);
+
+        const executeTrade = async (e) => {
+          e.preventDefault();
+          const totalCost = stock.price * quantity;
+
+          if (tradeType === 'buy' && user.balance < totalCost) {
+            showToast('Insufficient balance for this trade', 'error');
+            return;
+          }
+          if (tradeType === 'sell' && owned < quantity) {
+            showToast('Insufficient shares in portfolio', 'error');
+            return;
+          }
+
+          await services.orders.placeOrder(user.id, {
+            stockSymbol: stock.symbol,
+            stockName: stock.name,
+            quantity,
+            price: stock.price,
+            type: tradeType,
+            totalAmount: totalCost,
+          });
+
+          const newBalance = tradeType === 'buy' ? user.balance - totalCost : user.balance + totalCost;
+          updateBalance(newBalance);
+          showToast(`Successfully ${tradeType === 'buy' ? 'bought' : 'sold'} ${quantity} shares of ${stock.symbol}!`);
+          history.push('/portfolio');
+        };
+
+        if (loading) return <Loader />;
+
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-3xl font-bold">{stock.symbol} - {stock.name}</h1>
+                <p className="text-2xl font-bold mt-2">${stock.price.toFixed(2)}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card className="lg:col-span-2 h-96 flex flex-col">
+                <h3 className="font-bold mb-4">Historical Chart (Last 30 Days)</h3>
+                <div className="flex-1 relative h-64"><canvas ref={chartRef}></canvas></div>
+              </Card>
+
+              <Card>
+                <h3 className="font-bold text-lg mb-4">Order Trading Sheet</h3>
+                <div className="flex border rounded-md overflow-hidden mb-4 bg-gray-100 p-1">
+                  <button type="button" onClick={() => setTradeType('buy')} className={`flex-1 py-1.5 text-center text-sm font-semibold rounded-md ${tradeType === 'buy' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-600'}`}>Buy</button>
+                  <button type="button" onClick={() => setTradeType('sell')} className={`flex-1 py-1.5 text-center text-sm font-semibold rounded-md ${tradeType === 'sell' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-600'}`}>Sell</button>
+                </div>
+
+                <form onSubmit={executeTrade} className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">Quantity (shares)</label>
+                    <div className="flex border rounded-md mt-1 overflow-hidden">
+                      <button type="button" onClick={() => setQuantity(q => Math.max(1, q - 1))} className="px-3 bg-gray-100">-</button>
+                      <input type="number" min="1" className="w-full text-center focus:outline-none" value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 1)} />
+                      <button type="button" onClick={() => setQuantity(q => q + 1)} className="px-3 bg-gray-100">+</button>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm font-medium">
+                    <div className="flex justify-between text-gray-500"><span>Est. Price / share</span><span>${stock.price.toFixed(2)}</span></div>
+                    <div className="flex justify-between border-t border-gray-200 pt-2 font-bold text-gray-900"><span>Total Cost</span><span>${(stock.price * quantity).toFixed(2)}</span></div>
+                  </div>
+
+                  <Button type="submit" variant={tradeType === 'buy' ? 'primary' : 'danger'} className="w-full">
+                    {tradeType.toUpperCase()} {stock.symbol}
+                  </Button>
+                </form>
+              </Card>
+            </div>
+          </div>
+        );
+      };
+
+      // G. Portfolio Page
+      const Portfolio = () => {
+        const { user } = useAuth();
+        const [portfolio, setPortfolio] = useState([]);
+        const [summary, setSummary] = useState(null);
+        const [loading, setLoading] = useState(true);
+
+        const chartRef = useRef(null);
+        const chartInstance = useRef(null);
+
+        useEffect(() => {
+          const fetchPortfolio = async () => {
+            const port = await services.portfolio.getPortfolio(user.id);
+            const sum = await services.portfolio.getPortfolioSummary(user.id);
+            setPortfolio(port);
+            setSummary(sum);
+            setLoading(false);
+          };
+          fetchPortfolio();
+        }, [user.id]);
+
+        useEffect(() => {
+          if (portfolio.length === 0 || !chartRef.current) return;
+          const ctx = chartRef.current.getContext('2d');
+
+          if (chartInstance.current) {
+            chartInstance.current.destroy();
+          }
+
+          chartInstance.current = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: portfolio.map(p => p.symbol),
+              datasets: [{
+                data: portfolio.map(p => p.quantity * p.currentPrice),
+                backgroundColor: ['#4f46e5', '#a855f7', '#ec4899', '#f43f5e', '#f97316'],
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false
+            }
+          });
+
+          return () => {
+            if (chartInstance.current) {
+              chartInstance.current.destroy();
+            }
+          };
+        }, [portfolio]);
+
+        const columns = [
+          { header: 'Symbol', accessor: 'symbol', render: (row) => <span className="font-bold">{row.symbol}</span> },
+          { header: 'Name', accessor: 'name' },
+          { header: 'Quantity', accessor: 'quantity' },
+          { header: 'Avg Price', accessor: 'avgPrice', render: (row) => `$${row.avgPrice.toFixed(2)}` },
+          { header: 'Current Price', accessor: 'currentPrice', render: (row) => `$${row.currentPrice.toFixed(2)}` },
+          { header: 'Total Value', accessor: 'totalValue', render: (row) => <span className="font-semibold">${(row.quantity * row.currentPrice).toFixed(2)}</span> },
+          {
+            header: 'P&L',
+            accessor: 'pl',
+            render: (row) => {
+              const pl = (row.currentPrice - row.avgPrice) * row.quantity;
+              const plPercent = ((row.currentPrice - row.avgPrice) / row.avgPrice) * 100;
+              return (
+                <span className={pl >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {pl >= 0 ? '+' : ''}{pl.toFixed(2)} ({plPercent.toFixed(2)}%)
+                </span>
+              );
+            }
+          }
+        ];
+
+        if (loading || !summary) return <Loader />;
+
+        return (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold">My Portfolio</h1>
+              <p className="text-gray-500">Track simulator holdings.</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card className="flex flex-col items-center justify-center h-80">
+                <h3 className="font-semibold text-gray-900 mb-4 self-start">Asset Allocation</h3>
+                {portfolio.length > 0 ? (
+                  <div className="w-48 h-48"><canvas ref={chartRef}></canvas></div>
+                ) : (
+                  <p className="text-gray-500 text-center py-12">No assets yet.</p>
+                )}
+              </Card>
+
+              <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <Card className="flex flex-col justify-center p-8">
+                  <p className="text-sm text-gray-500 font-medium">Total Invested</p>
+                  <p className="text-3xl font-bold mt-2">${summary.totalInvested.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                </Card>
+                <Card className="flex flex-col justify-center p-8">
+                  <p className="text-sm text-gray-500 font-medium">Current Value</p>
+                  <p className="text-3xl font-bold mt-2">${summary.currentValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                </Card>
+                <Card className="sm:col-span-2 flex flex-col justify-center p-8 border-l-4 border-l-indigo-600">
+                  <p className="text-sm text-gray-500 font-medium">Total Profit & Loss</p>
+                  <div className="flex items-baseline gap-2 mt-2">
+                    <p className={`text-4xl font-bold ${summary.profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {summary.profitLoss >= 0 ? '+' : '-'}${Math.abs(summary.profitLoss).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className={`text-sm ${summary.profitLossPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      ({summary.profitLossPercentage >= 0 ? '+' : ''}{summary.profitLossPercentage.toFixed(2)}%)
+                    </p>
+                  </div>
+                </Card>
+              </div>
+            </div>
+
+            <Table columns={columns} data={portfolio} keyField="symbol" />
+          </div>
+        );
+      };
+
+      // H. Order & Transactions History Page
+      const Transactions = () => {
+        const { user } = useAuth();
+        const [orders, setOrders] = useState([]);
+        const [loading, setLoading] = useState(true);
+
+        useEffect(() => {
+          services.orders.getOrders(user.id).then(res => {
+            setOrders(res);
+            setLoading(false);
+          });
+        }, [user.id]);
+
+        const columns = [
+          { header: 'Date', accessor: 'date', render: (row) => new Date(row.date).toLocaleString() },
+          { 
+            header: 'Type', 
+            accessor: 'type', 
+            render: (row) => (
+              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${row.type === 'buy' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {row.type.toUpperCase()}
+              </span>
+            )
+          },
+          { header: 'Symbol', accessor: 'stockSymbol' },
+          { header: 'Quantity', accessor: 'quantity' },
+          { header: 'Price', accessor: 'price', render: (row) => `$${row.price.toFixed(2)}` },
+          { header: 'Total', accessor: 'totalAmount', render: (row) => `$${row.totalAmount.toFixed(2)}` },
+          { header: 'Status', accessor: 'status', render: (row) => <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full font-semibold">COMPLETED</span> }
+        ];
+
+        if (loading) return <Loader />;
+
+        return (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold">Transaction History</h1>
+              <p className="text-gray-500">View simulator trade order logs.</p>
+            </div>
+            <Table columns={columns} data={orders} />
+          </div>
+        );
+      };
+
+      const Orders = () => <Transactions />;
+
+      // I. Profile Page
+      const Profile = () => {
+        const { user } = useAuth();
+        return (
+          <div className="space-y-6 max-w-2xl mx-auto">
+            <h1 className="text-2xl font-bold">Profile Details</h1>
+            <Card>
+              <div className="flex items-center space-x-4 mb-6">
+                <div className="h-16 w-16 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xl">
+                  {user.name?.substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">{user.name}</h2>
+                  <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 text-xs rounded-full font-semibold uppercase">{user.role}</span>
+                </div>
+              </div>
+
+              <div className="border-t pt-6 space-y-4">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Email Address</span>
+                  <span className="font-medium text-gray-900">{user.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Simulated Balance</span>
+                  <span className="font-bold text-gray-900">${user.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </Card>
+          </div>
+        );
+      };
+
+      // J. Watchlist Page
+      const Watchlist = () => (
+        <div className="space-y-6">
+          <h1 className="text-2xl font-bold">Watchlist</h1>
+          <Card className="text-center py-12">
+            <p className="text-gray-500">No watched stocks yet.</p>
+            <div className="mt-4"><Link to="/stocks"><Button>Explore Stocks Market</Button></Link></div>
+          </Card>
+        </div>
+      );
+
+      // K. Admin Panel Page
+      const Admin = () => {
+        const [stats, setStats] = useState(null);
+        const [users, setUsers] = useState([]);
+        const [loading, setLoading] = useState(true);
+
+        useEffect(() => {
+          Promise.all([
+            services.admin.getSystemStats(),
+            services.admin.getUsers()
+          ]).then(([s, u]) => {
+            setStats(s);
+            setUsers(u);
+            setLoading(false);
+          });
+        }, []);
+
+        const columns = [
+          { header: 'Name', accessor: 'name' },
+          { header: 'Email', accessor: 'email' },
+          { 
+            header: 'Role', 
+            accessor: 'role', 
+            render: (row) => (
+              <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${row.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
+                {row.role.toUpperCase()}
+              </span>
+            )
+          },
+          { header: 'Balance', accessor: 'balance', render: (row) => `$${row.balance.toLocaleString()}` }
+        ];
+
+        if (loading) return <Loader />;
+
+        return (
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+              <p className="text-gray-500">Overview statistics.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="flex items-center p-6 border-l-4 border-blue-500">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Total Users</p>
+                  <p className="text-2xl font-semibold text-gray-900 mt-1">{stats.totalUsers.toLocaleString()}</p>
+                </div>
+              </Card>
+              <Card className="flex items-center p-6 border-l-4 border-green-500">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Total Trades</p>
+                  <p className="text-2xl font-semibold text-gray-900 mt-1">{stats.totalTrades.toLocaleString()}</p>
+                </div>
+              </Card>
+              <Card className="flex items-center p-6 border-l-4 border-indigo-500">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Volume Traded</p>
+                  <p className="text-2xl font-semibold text-gray-900 mt-1">${stats.volumeTraded.toLocaleString()}</p>
+                </div>
+              </Card>
+            </div>
+
+            <Table columns={columns} data={users} />
+          </div>
+        );
+      };
+
+      // L. 404 NotFound Page
+      const NotFound = () => (
+        <div className="min-h-screen flex items-center justify-center text-center">
+          <div>
+            <h1 className="text-5xl font-bold text-gray-900">404</h1>
+            <p className="text-gray-500 mt-2">Page not found.</p>
+            <div className="mt-6"><Link to="/"><Button>Back Home</Button></Link></div>
+          </div>
+        </div>
+      );
+
+      // =========================================================================
+      // 7. APP ROOT & ROUTING
+      // =========================================================================
+      const App = () => (
+        <HashRouter>
+          <AuthProvider>
+            <Switch>
+              {/* Public routes */}
+              <Route exact path="/" render={() => <MainLayout><Home /></MainLayout>} />
+              <Route path="/login" render={() => <MainLayout><Login /></MainLayout>} />
+              <Route path="/register" render={() => <MainLayout><Register /></MainLayout>} />
+
+              {/* Protected Dashboard routes */}
+              <ProtectedRoute path="/dashboard" component={() => <DashboardLayout><Dashboard /></DashboardLayout>} />
+              <ProtectedRoute path="/stocks/:id" component={() => <DashboardLayout><StockDetails /></DashboardLayout>} />
+              <ProtectedRoute path="/stocks" component={() => <DashboardLayout><Stocks /></DashboardLayout>} />
+              <ProtectedRoute path="/portfolio" component={() => <DashboardLayout><Portfolio /></DashboardLayout>} />
+              <ProtectedRoute path="/orders" component={() => <DashboardLayout><Orders /></DashboardLayout>} />
+              <ProtectedRoute path="/transactions" component={() => <DashboardLayout><Transactions /></DashboardLayout>} />
+              <ProtectedRoute path="/watchlist" component={() => <DashboardLayout><Watchlist /></DashboardLayout>} />
+              <ProtectedRoute path="/profile" component={() => <DashboardLayout><Profile /></DashboardLayout>} />
+              <ProtectedRoute adminOnly path="/admin" component={() => <DashboardLayout><Admin /></DashboardLayout>} />
+
+              <Route component={NotFound} />
+            </Switch>
+          </AuthProvider>
+        </HashRouter>
+      );
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
