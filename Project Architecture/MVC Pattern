@@ -1,0 +1,206 @@
+# 🏗️ MVC (Model-View-Controller) Pattern
+
+SB Stocks is developed using the **Model-View-Controller (MVC)** architectural pattern. MVC divides the application into three independent components: **Model**, **View**, and **Controller**. This separation improves code organization, maintainability, scalability, and makes the application easier to develop and test.
+
+---
+
+## MVC Architecture
+
+```
+                User
+                  │
+                  ▼
+        HTTP Request (API)
+                  │
+                  ▼
+          View (Routes Layer)
+                  │
+                  ▼
+      Controller (Business Logic)
+                  │
+                  ▼
+      Model (Database Operations)
+                  │
+                  ▼
+           MongoDB Database
+                  │
+                  ▼
+      Controller Processes Data
+                  │
+                  ▼
+         JSON Response to User
+```
+
+---
+
+# 1. Model Layer
+
+The **Model** layer is responsible for managing the application's data. It defines the database structure using **Mongoose schemas** and performs all database operations with MongoDB.
+
+### Responsibilities
+- Define database schemas.
+- Store and retrieve application data.
+- Validate data before saving.
+- Perform CRUD (Create, Read, Update, Delete) operations.
+- Maintain relationships between collections.
+
+### Models Used
+- **User Model**
+  - Stores user details such as name, email, password, and profile information.
+
+- **Portfolio Model**
+  - Stores virtual portfolios and current stock holdings.
+
+- **Transaction Model**
+  - Records all buy and sell transactions.
+
+- **Stock Model**
+  - Stores stock information, symbols, prices, and market data.
+
+---
+
+# 2. Controller Layer
+
+The **Controller** contains the business logic of the application. It receives requests from the routes, validates the input, communicates with the models, and sends appropriate responses.
+
+### Responsibilities
+- Process client requests.
+- Validate user input.
+- Authenticate users.
+- Execute trading operations.
+- Update portfolio balances.
+- Calculate profits and losses.
+- Retrieve stock information.
+- Handle application errors.
+- Return API responses.
+
+### Example Controller Functions
+- Register User
+- Login User
+- Get Stock List
+- Buy Stock
+- Sell Stock
+- Create Portfolio
+- View Portfolio
+- View Transaction History
+
+---
+
+# 3. View Layer (Routes)
+
+In SB Stocks, the **View** is implemented through REST API routes. These routes define how the application responds to different HTTP requests.
+
+### Responsibilities
+- Receive HTTP requests.
+- Map requests to controller functions.
+- Return JSON responses.
+- Define API endpoints.
+- Handle request parameters.
+
+### Example API Endpoints
+
+| Method | Endpoint | Description |
+|----------|-----------------|----------------------------|
+| POST | /register | Register a new user |
+| POST | /login | User login |
+| GET | /stocks | Fetch stock listings |
+| GET | /portfolio | Retrieve portfolio details |
+| POST | /buy | Buy stocks |
+| POST | /sell | Sell stocks |
+| GET | /transactions | View transaction history |
+
+---
+
+# Request Flow
+
+```
+User
+ │
+ ▼
+Routes
+ │
+ ▼
+Controllers
+ │
+ ▼
+Models
+ │
+ ▼
+MongoDB
+ │
+ ▼
+Controllers
+ │
+ ▼
+Routes
+ │
+ ▼
+User Response
+```
+
+---
+
+# Folder Structure (MVC)
+
+```
+SB-Stocks/
+│
+├── models/
+│   ├── User.js
+│   ├── Portfolio.js
+│   ├── Transaction.js
+│   └── Stock.js
+│
+├── controllers/
+│   ├── authController.js
+│   ├── portfolioController.js
+│   ├── stockController.js
+│   └── transactionController.js
+│
+├── routes/
+│   ├── authRoutes.js
+│   ├── stockRoutes.js
+│   ├── portfolioRoutes.js
+│   └── transactionRoutes.js
+│
+├── middleware/
+│
+├── config/
+│
+├── app.js
+└── server.js
+```
+
+---
+
+# Advantages of MVC
+
+### Separation of Concerns
+Each layer has a specific responsibility, making the code easier to understand and maintain.
+
+### Scalability
+New features can be added by creating new models, controllers, and routes without affecting existing functionality.
+
+### Maintainability
+Changes in one layer have minimal impact on other layers, simplifying updates and debugging.
+
+### Code Reusability
+Business logic and database operations can be reused across multiple API endpoints.
+
+### Easy Testing
+Each layer can be tested independently, improving software quality and reducing bugs.
+
+### Better Collaboration
+Frontend and backend developers can work simultaneously on different components with minimal conflicts.
+
+### Organized Project Structure
+MVC keeps the project modular, making it easier for developers to navigate and contribute.
+
+### Enhanced Security
+Controllers handle validation and authentication before interacting with the database, ensuring secure data processing.
+
+---
+
+# Summary
+
+The MVC architecture provides a structured and modular foundation for the SB Stocks application. By separating data management (Model), business logic (Controller), and request handling (View), the application becomes easier to maintain, extend, and scale. This architecture supports secure authentication, efficient portfolio management, real-time stock data processing, and reliable transaction handling while ensuring a clean and organized codebase.
