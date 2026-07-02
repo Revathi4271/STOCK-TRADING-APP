@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>SB Stocks | Dashboard</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">SB <span>Stocks</span></div>
+    <div class="balance-pill">Virtual Cash: <b id="cashBalance">$0.00</b></div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="label">Portfolio Value</div>
+      <div class="value" id="statValue">$0.00</div>
+    </div>
+    <div class="stat">
+      <div class="label">Total Invested</div>
+      <div class="value" id="statInvested">$0.00</div>
+    </div>
+    <div class="stat">
+      <div class="label">Unrealized P&amp;L</div>
+      <div class="value" id="statPnl">$0.00</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="card">
+      <h2>My Holdings</h2>
+      <table>
+        <thead>
+          <tr><th>Symbol</th><th>Qty</th><th>Avg Price</th><th>Current</th><th>P&amp;L</th></tr>
+        </thead>
+        <tbody id="holdingsBody">
+          <tr><td colspan="5">No holdings yet — buy a stock from the market list.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Market — Buy / Sell</h2>
+      <div id="stockList"></div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    async function loadDashboard() {
+      const [{ portfolio, cashBalance, unrealizedPnL }, { stocks }] = await Promise.all([
+        api("/api/portfolio", "GET"),
+        api("/api/stocks", "GET"),
+      ]);
+
+      document.getElementById("cashBalance").textContent = fmt(cashBalance);
+      document.getElementById("statValue").textContent = fmt(portfolio.totalCurrentValue);
+      document.getElementById("statInvested").textContent = fmt(portfolio.totalInvested);
+      const pnlEl = document.getElementById("statPnl");
+      pnlEl.textContent = fmt(unrealizedPnL);
+      pnlEl.className = "value " + (unrealizedPnL >= 0 ? "pos" : "neg");
+
+      const holdingsBody = document.getElementById("holdingsBody");
+      if (portfolio.holdings.length) {
+        holdingsBody.innerHTML = portfolio.holdings
+          .map((h) => {
+            const stock = stocks.find((s) => s.symbol === h.symbol);
+            const current = stock ? stock.currentPrice : h.avgBuyPrice;
+            const pnl = (current - h.avgBuyPrice) * h.quantity;
+            return `<tr>
+              <td>${h.symbol}</td>
+              <td>${h.quantity}</td>
+              <td>${fmt(h.avgBuyPrice)}</td>
+              <td>${fmt(current)}</td>
+              <td class="${pnl >= 0 ? "pos" : "neg"}">${fmt(pnl)}</td>
+            </tr>`;
+          })
+          .join("");
+      }
+
+      const stockList = document.getElementById("stockList");
+      stockList.innerHTML = stocks
+        .map(
+          (s) => `<div class="stock-row">
+            <div>
+              <div class="stock-sym">${s.symbol}</div>
+              <div class="stock-name">${s.companyName}</div>
+            </div>
+            <div style="text-align:right">
+              <div>${fmt(s.currentPrice)}</div>
+              <div style="margin-top:6px">
+                <button class="btn buy" style="width:auto;margin:0 4px 0 0;padding:6px 10px" onclick="trade('buy','${s.symbol}')">Buy</button>
+                <button class="btn sell" style="width:auto;margin:0;padding:6px 10px" onclick="trade('sell','${s.symbol}')">Sell</button>
+              </div>
+            </div>
+          </div>`
+        )
+        .join("");
+    }
+
+    async function trade(type, symbol) {
+      const quantity = prompt(`Quantity to ${type} for ${symbol}:`, "1");
+      if (!quantity || isNaN(quantity)) return;
+      try {
+        await api(`/api/trade/${type}`, "POST", { symbol, quantity: Number(quantity) });
+        loadDashboard();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    if (!localStorage.getItem("sb_token")) {
+      window.location.href = "index.html";
+    } else {
+      loadDashboard();
+    }
+  </script>
+</body>
+</html>
